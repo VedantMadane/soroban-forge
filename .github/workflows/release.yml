@@ -14,17 +14,15 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      # Keep in sync with rust-toolchain.toml: the pinned soroban-sdk 21.x
-      # does not compile on newer stable toolchains.
-      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: wasm32v1-none
       - uses: Swatinem/rust-cache@v2
         with:
           key: release
       - name: Build contracts to WASM
         run: |
-          cargo build --locked --release --target wasm32-unknown-unknown \
+          cargo build --locked --release --target wasm32v1-none \
             -p soroban-forge-escrow \
             -p soroban-forge-vesting \
             -p soroban-forge-multi-sig-wallet \
@@ -36,7 +34,7 @@ jobs:
           mkdir -p artifacts
           shopt -s nullglob
           found=0
-          for wasm in target/wasm32-unknown-unknown/release/*.wasm; do
+          for wasm in target/wasm32v1-none/release/*.wasm; do
             cp "$wasm" artifacts/
             echo "Built $(basename "$wasm")"
             found=1

@@ -29,17 +29,13 @@ By participating, you agree to uphold our Code of Conduct. Be respectful, inclus
 
 ## Development Setup
 
-The workspace pins **Rust 1.96.0** via `rust-toolchain.toml`. Do not bump it
-casually: soroban-sdk 21.x does not compile on newer stable toolchains
-(`ethnum 1.5.0` relies on a `TryFromIntError` transmute that breaks when the
-standard library changes that type's size). Upgrading the toolchain requires
-the soroban-sdk 27 migration issue in the backlog.
+The workspace tracks **stable Rust** via `rust-toolchain.toml` and builds
+contracts for the `wasm32v1-none` target required by soroban-sdk 27.x.
 
 ```bash
-# Install Rust; rustup auto-installs the pinned 1.96.0 toolchain on first use
-rustup toolchain install 1.96.0
+# Install Rust; rustup auto-installs the stable toolchain on first use
 rustup component add rustfmt clippy
-rustup target add wasm32-unknown-unknown
+rustup target add wasm32v1-none
 
 # Install Soroban CLI
 cargo install soroban-cli

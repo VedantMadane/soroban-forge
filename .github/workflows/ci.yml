@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
       - run: cargo fmt --all -- --check
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
@@ -34,9 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: wasm32v1-none
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --workspace --all-targets --locked
       - run: cargo doc --workspace --no-deps --locked --document-private-items
@@ -46,9 +46,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: wasm32v1-none
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --workspace --all-targets --locked
 
@@ -64,27 +64,22 @@ jobs:
       - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # RUSTSEC-2026-0009 (time 0.3.44): `time` is a transitive lockfile
-          # artifact of the soroban-sdk 21 chain, not part of the compiled
-          # build graph, and cannot be updated without migrating the SDK.
-          # Tracked by the soroban-sdk 27 migration issue; re-evaluate after.
-          ignore: RUSTSEC-2026-0009
 
   wasm-size:
     name: WASM Size Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: wasm32v1-none
       - uses: Swatinem/rust-cache@v2
       # Build only the contract crates for the WASM target; shared/test-utils
       # are not deployable artifacts. NOTE: keep this list in sync with the
       # contract crates added to the workspace.
       - name: Build contract WASM artifacts
         run: |
-          cargo build --locked --release --target wasm32-unknown-unknown \
+          cargo build --locked --release --target wasm32v1-none \
             --package soroban-forge-escrow \
             --package soroban-forge-vesting \
             --package soroban-forge-multi-sig-wallet \
@@ -94,7 +89,7 @@ jobs:
       - name: Report WASM artifact sizes
         run: |
           shopt -s nullglob
-          for wasm in target/wasm32-unknown-unknown/release/*.wasm; do
+          for wasm in target/wasm32v1-none/release/*.wasm; do
             echo "$(basename "$wasm"): $(stat -c%s "$wasm") bytes"
           done
       - name: Enforce maximum WASM size
@@ -102,7 +97,7 @@ jobs:
           MAX_SIZE=150000
           shopt -s nullglob
           found=0
-          for wasm in target/wasm32-unknown-unknown/release/*.wasm; do
+          for wasm in target/wasm32v1-none/release/*.wasm; do
             found=1
             SIZE=$(stat -c%s "$wasm")
             if [ "$SIZE" -gt "$MAX_SIZE" ]; then
@@ -114,3 +109,31 @@ jobs:
             echo "::error::No WASM artifacts were produced; the size check cannot run"
             exit 1
           fi
+
+  provenance:
+    name: Provenance Manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The manifest records the exact git revision the artifacts were
+          # built from, so the checkout must not be shallow.
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+      - uses: Swatinem/rust-cache@v2
+      - name: Build artifacts and generate manifest
+        run: scripts/provenance.sh build
+      - name: Verify artifacts reproduce from a clean build
+        run: |
+          # A drift-free rebuild from the same tree is the whole point of
+          # the manifest: verify from scratch, not against warm caches.
+          cargo clean
+          scripts/provenance.sh verify
+      - name: Upload provenance manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: provenance-manifest
+          path: provenance-manifest.json
+          if-no-files-found: error

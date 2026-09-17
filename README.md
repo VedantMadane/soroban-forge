@@ -5,29 +5,66 @@
 [![Rust](https://img.shields.io/badge/Rust-1.96.0-orange)](https://www.rust-lang.org)
 [![WASM](https://img.shields.io/badge/WASM-32--bit-654FF0)](https://github.com/Meet-hybrid/soroban-forge/blob/main/.github/workflows/ci.yml)
 
-**Soroban Forge** is a community-driven library of reusable Soroban smart-contract
-foundations and developer tooling for the Stellar ecosystem — escrow, vesting,
-multi-signature wallets, DAO governance, subscription payments, and marketplace
+**Soroban Forge** is a library of reusable Soroban smart-contract foundations
+and developer tooling for the Stellar ecosystem — escrow, vesting, multi-
+signature wallets, DAO governance, subscription payments, and marketplace
 royalties, plus a developer CLI and TypeScript bindings.
+
+## Proof at a glance
+
+The escrow contract is **deployed and verified on Stellar testnet**. Every
+step below was executed live; run `bash scripts/demo-testnet.sh` to reproduce
+([step-by-step walkthrough with expected output](docs/WALKTHROUGH.md)).
+
+| Artifact | Value |
+|---|---|
+| Network | Stellar Testnet (`Test SDF Network ; September 2015`) |
+| Escrow contract | `CC227UDF6WBLRTOKKVRIJN7BGSBK67ZGV6IDARJ2AMATGSQ7UZNBZHSB` |
+| WASM sha256 | `ccbb6603cce6d194407b822df110c91324939cea92ba21937a6d9f1e2c9e48b9` |
+| soroban-sdk | 27.0.6 · stable Rust · `wasm32v1-none` · 18,054 bytes |
+| Demo token (SAC) | `CBJQ53EOHB5MWSS7CETN523WILLNVS7NQAQQAQIS5QAYTPRCZSGKL23O` (`credit` asset) |
+| Roles | buyer `GCTEIX…VSGF` · seller `GCGPZ3…4SFS` · arbiter `GCR7CB…GJTQ` |
+
+| Round | Flow | Transaction |
+|---|---|---|
+| 1 | create → deposit → release (seller paid 500) | [create 817950c8…](https://stellar.expert/explorer/testnet/tx/817950c8ad95ecad9636783e5e8e8b8e515f94e3364b63c2c02328ff3b675bb9) · deposit · release |
+| 2 | create → deposit → dispute(buyer) → resolve for seller | dispute + resolve transactions |
+| 3 | create → deposit → dispute(seller) → resolve for buyer | dispute + resolve transactions |
+
+After all three rounds: **buyer 500 + seller 1000 = 1500 credit minted; the
+contract holds zero** — the on-chain conservation property (`deposited ==
+paid out`) verified on a live network, matching the in-repo property test.
+The token-transfer event from round 1's deposit is visible in the transaction
+linked above: 500 `credit` moved buyer → contract.
+
+> Honest notes: testnet only (no mainnet deployment); the demo identities are
+> throwaway keys from this machine, not fixtures of the protocol; two-auth
+> escrow creation was deliberately **rejected as a design** — a live
+> `TxBadAuth` on every standard signing path during this demo motivated the
+> buyer-only creation flow. See [docs/KNOWN-LIMITATIONS.md](docs/KNOWN-LIMITATIONS.md).
 
 The goal is simple: stop rewriting the same contracts for every project. Pick a
 well-documented foundation, audit it for your use case, and ship.
 
 > **Status:** This project is under active development. The contracts are **not
 > independently audited** and should not be treated as production-ready without
-> your own security review. All six contracts are implemented and tested; see
-> the per-contract docs for scope notes and reserved-but-unreachable states.
+> your own security review. The **escrow contract is the flagship**: it holds
+> and moves real SEP-41 tokens end-to-end and is verified by a conservation
+> property test. The other five contracts are state machines awaiting the same
+> treatment — see the [Feature Status Matrix](docs/FEATURE-STATUS.md) and
+> [Known Limitations](docs/KNOWN-LIMITATIONS.md) for exactly what is and is
+> not done.
 
 ## Contracts
 
 | Contract | Description | Status |
 |----------|-------------|--------|
-| **Escrow** | Buyer–seller escrow with deadline-based refunds (`create → deposit → release / refund / cancel`, with `Disputed` reserved) | ✅ Implemented · 16 tests |
-| **Vesting** | Time-locked token release with cliff and linear release (`create_schedule → claim / claimable`) | ✅ Implemented · 21 tests |
-| **Multi-Sig Wallet** | Multi-owner wallet with configurable approval thresholds (`initialize → submit → confirm → execute`) | ✅ Implemented · 18 tests |
-| **DAO Governance** | On-chain proposals, one-vote-per-voter voting, deadline enforcement, and finalisation | ✅ Implemented · 16 tests |
-| **Subscription Payments** | Recurring payment plans with periodic billing (`subscribe → charge / cancel`) | ✅ Implemented · 12 tests |
-| **Marketplace Royalties** | Asset sales with configurable basis-point royalty distribution | ✅ Implemented · 10 tests |
+| **Escrow** | Three-party escrow holding real SEP-41 tokens: `create → deposit → release / refund / dispute → resolve / cancel`, arbiter-enforced dispute flow, lifecycle events, per-record persistent storage with TTL keeping | ✅ **Flagship** · 27 tests · conservation property verified |
+| **Vesting** | Time-locked token release with cliff and linear release (`create_schedule → claim / claimable`) — state machine only, no settlement yet | ✅ State machine · 21 tests |
+| **Multi-Sig Wallet** | Multi-owner wallet with configurable approval thresholds (`initialize → submit → confirm → execute`) — no dispatch yet | ✅ State machine · 18 tests |
+| **DAO Governance** | On-chain proposals, one-vote-per-voter voting, deadline enforcement, and finalisation — executes nothing on-chain | ✅ State machine · 16 tests |
+| **Subscription Payments** | Recurring payment plans with periodic billing (`subscribe → charge / cancel`) — charges nothing | ✅ State machine · 12 tests |
+| **Marketplace Royalties** | Asset sales with configurable basis-point royalty distribution — pays no recipients | ✅ State machine · 10 tests |
 
 Implementation work is tracked as scoped, labeled
 [issues](https://github.com/Meet-hybrid/soroban-forge/issues).
@@ -92,7 +129,7 @@ soroban-forge/
 │   ├── subscription-payments/
 │   └── marketplace-royalties/
 ├── packages/                 # Language bindings and example apps
-│   ├── typescript-sdk/       # TypeScript SDK for contract interaction
+│   ├── typescript-sdk/       # @soroban-forge/escrow-client (generated from the deployed escrow ABI)
 │   ├── nextjs-example/       # Next.js reference application
 │   └── deployment-templates/ # Docker and deployment templates
 ├── docs/                     # Architecture, tutorials, best practices
@@ -107,12 +144,11 @@ run through `cargo test --workspace`.
 
 ### 1. Prerequisites
 
-The workspace pins **Rust 1.96.0** (see `rust-toolchain.toml`) — don't bump it
-casually, the pinned soroban-sdk 21.x does not compile on newer toolchains.
+The workspace pins **stable Rust** and builds contracts for the
+`wasm32v1-none` target required by soroban-sdk 27.x.
 
 ```bash
-rustup toolchain install 1.96.0          # rustup auto-uses the pinned toolchain
-rustup target add wasm32-unknown-unknown # needed to build contracts to WASM
+rustup target add wasm32v1-none          # needed to build contracts to WASM
 cargo install soroban-cli                # optional: for deployment
 ```
 
@@ -130,8 +166,8 @@ make lint                                        # fmt + clippy gates
 ### 3. Build a contract to WASM
 
 ```bash
-cargo build --release --target wasm32-unknown-unknown -p soroban-forge-escrow
-# → target/wasm32-unknown-unknown/release/soroban_forge_escrow.wasm
+cargo build --release --target wasm32v1-none -p soroban-forge-escrow
+# → target/wasm32v1-none/release/soroban_forge_escrow.wasm
 ```
 
 ### 4. Use the developer CLI
@@ -146,14 +182,15 @@ cargo run -p soroban-forge-cli -- test --package soroban-forge-escrow
 
 ```bash
 stellar contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/soroban_forge_escrow.wasm \
+  --wasm target/wasm32v1-none/release/soroban_forge_escrow.wasm \
   --source-account <YOUR_KEYPAIR_NAME> \
   --network testnet
 ```
 
 Then exercise the deployed contract with `stellar contract invoke` — e.g.
-`create_escrow(buyer, seller, arbiter, amount, timeout)`, then
-`deposit`, `release`, `refund`, or `cancel` per the lifecycle above.
+`create_escrow(buyer, seller, arbiter, token, amount, timeout)`, then
+`deposit` (moves real tokens), `release`, `refund`, `dispute` + `resolve`,
+or `cancel` per the lifecycle above.
 
 ## Development
 
@@ -176,6 +213,8 @@ reproducible builds and a per-contract WASM size budget.
 - [Writing Your First Contract](docs/tutorials/writing-your-first-contract.md)
 - [Architecture](docs/architecture/index.md)
 - [Contract Overview](docs/contracts/index.md)
+- [Feature Status Matrix](docs/FEATURE-STATUS.md)
+- [Known Limitations](docs/KNOWN-LIMITATIONS.md)
 - [Storage Patterns](docs/architecture/storage-patterns.md)
 - [Smart Contract Security](docs/best-practices/smart-contract-security.md)
 - [Testing Strategy](docs/best-practices/testing-strategy.md)

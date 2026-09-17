@@ -6,10 +6,13 @@ export default function Home() {
         Production-ready Soroban smart contracts, reusable Rust libraries, and developer tooling for the Stellar ecosystem.
       </p>
       <div className="mt-8 flex gap-4">
-        <a href="https://github.com/teachlink/soroban-forge" className="text-blue-600 underline">
+        <a href="https://github.com/Meet-hybrid/soroban-forge" className="text-blue-600 underline">
           View on GitHub
         </a>
-        <a href="/docs/tutorials/getting-started.md" className="text-blue-600 underline">
+        <a
+          href="https://github.com/Meet-hybrid/soroban-forge/blob/main/docs/tutorials/getting-started.md"
+          className="text-blue-600 underline"
+        >
           Get Started
         </a>
       </div>

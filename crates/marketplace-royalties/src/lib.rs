@@ -185,7 +185,7 @@ mod tests {
         () => {{
             let env = Env::default();
             env.mock_all_auths();
-            let contract_id = env.register_contract(None, MarketplaceRoyalties);
+            let contract_id = env.register(MarketplaceRoyalties, ());
             let client = SorobanForgeMarketplaceRoyaltiesClient::new(&env, &contract_id);
             let accounts = TestAccounts::generate(&env);
             client.set_royalty(&accounts.arbiter, &accounts.user2, &500_u32);

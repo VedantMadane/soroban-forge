@@ -19,8 +19,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           allow-low: true
           deny-warnings: false
-          # RUSTSEC-2026-0009 (time 0.3.44): `time` is a transitive lockfile
-          # artifact of the soroban-sdk 21 chain, not part of the compiled
-          # build graph, and cannot be updated without migrating the SDK.
-          # Tracked by the soroban-sdk 27 migration issue; re-evaluate after.
-          ignore: RUSTSEC-2026-0009
+          # No ignores: the RUSTSEC-2026-0009 (`time`) advisory was cleared
+          # by updating `time` to 0.3.47 in the lockfile after the SDK 27
+          # migration. Warnings (e.g. transitive `paste` unmaintained) do
+          # not fail this job while `deny-warnings` is false.

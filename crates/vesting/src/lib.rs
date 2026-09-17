@@ -310,7 +310,7 @@ mod tests {
             let env = Env::default();
             env.mock_all_auths();
             env.ledger().set_timestamp(START);
-            let contract_id = env.register_contract(None, Vesting);
+            let contract_id = env.register(Vesting, ());
             let client = SorobanForgeVestingClient::new(&env, &contract_id);
             let accounts = TestAccounts::generate(&env);
             (env, client, accounts)

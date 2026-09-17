@@ -238,7 +238,7 @@ mod tests {
             let env = Env::default();
             env.mock_all_auths();
             env.ledger().set_timestamp(START);
-            let contract_id = env.register_contract(None, SubscriptionPayments);
+            let contract_id = env.register(SubscriptionPayments, ());
             let client = SorobanForgeSubscriptionPaymentsClient::new(&env, &contract_id);
             let accounts = TestAccounts::generate(&env);
             let subscription_id = client.subscribe(

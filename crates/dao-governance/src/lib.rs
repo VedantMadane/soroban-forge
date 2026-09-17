@@ -255,7 +255,7 @@ mod tests {
             let env = Env::default();
             env.mock_all_auths();
             env.ledger().set_timestamp(START);
-            let contract_id = env.register_contract(None, DaoGovernance);
+            let contract_id = env.register(DaoGovernance, ());
             let client = SorobanForgeDaoGovernanceClient::new(&env, &contract_id);
             let accounts = TestAccounts::generate(&env);
             let proposal_id = client.propose(&accounts.user1, &payload(&env), &DURATION);

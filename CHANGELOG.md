@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Negative-authorization test suite** for escrow
+  (`crates/escrow/src/authz.rs`, 19 tests): per entrypoint, proves a wrong
+  signer is rejected by the host, that an armed signature cannot be
+  replayed over different arguments (create over a changed amount, deposit
+  pull over a changed amount), that a dispute claim requires the claimant's
+  own signature, and that a blank envelope aborts every state-changing
+  call without writing state. Includes `env.auths()` assertions pinning the
+  authorized-invocation tree of every payout path. Verified finding, now
+  documented: contract self-authorization is implicit in the Soroban host,
+  so the recorded tree for a payout is the party's entrypoint frame only —
+  and a seller signature alone legitimately completes a release.
+- **Reviewer walkthrough** (`docs/WALKTHROUGH.md`): step-by-step expected
+  output for verifying the repo end-to-end, including the testnet receipt
+  round.
+- **Provenance manifest gate** (`scripts/provenance.sh` + a CI job):
+  builds all six contract WASMs, records SHA-256 hashes per artifact at a
+  named git revision into `provenance-manifest.json`, verifies them from a
+  clean rebuild, and uploads the manifest as a CI artifact.
+- **Mainnet deploy + smoke script** (`scripts/deploy-mainnet.sh`): mirrors
+  the testnet demo against Pubnet — same three escrow rounds over a
+  zero-value smoke asset, with an explicit cost-confirmation gate,
+  best-effort XLM preflight (stroop-correct), idempotent trustlines,
+  WASM-hash cross-check against the provenance manifest, and explorer
+  receipts. Prepared, not yet executed: needs four pre-funded mainnet
+  identities (human step). Known limitation: the installed stellar CLI
+  version may disagree with the preflight invocations — the script then
+  warns and continues rather than failing mid-run.
+
+### Fixed
+- **Security audit is clean without ignores.** `time` was updated to
+  0.3.47 in the lockfile, clearing RUSTSEC-2026-0009 (an earlier note
+  claimed the SDK 27 migration removed it — it did not; the advisory
+  remained and CI correctly failed). The unused direct `rand` dependency
+  was dropped, and the weekly audit workflow's stale ignore was removed.
+  Remaining audit output is warnings only, both transitive and not
+  actionable from this workspace: `paste` (unmaintained, via
+  soroban-sdk) and `rand` 0.8 (unsound edge case, via
+  soroban-env-host's crypto stack); warnings do not fail the gate.
+
+### Changed
+- **Workspace migrated to soroban-sdk 27.0.6 on stable Rust** (was 21.5.1
+  pinned to Rust 1.96.0). Contracts build for `wasm32v1-none` (escrow
+  WASM: ~18 KB). Test registration uses `env.register(Contract, ())`.
+- **Escrow contract rebuilt as the flagship primitive** (v0.1.0's was a
+  state machine only):
+  - Real SEP-41 token settlement — `deposit` pulls from the buyer,
+    `release`/`refund`/`resolve` pay out — with **transfer-before-state
+    ordering** so a failed transfer leaves storage untouched.
+  - **Dispute flow implemented**: `dispute(escrow_id, claimant)` by the
+    buyer or seller, `resolve(escrow_id, in_favor_of_seller)` by the
+    arbiter, final. `Disputed` is now a live state, not reserved.
+  - **Release is seller-confirmed** (the paid party confirms delivery);
+    the v0.1.0 buyer-confirmed semantics are gone.
+  - **Lifecycle events**: `EscrowCreated`, `Deposited`, `Released`,
+    `Refunded`, `Disputed`, `Resolved`, `Cancelled` (escrow id as topic).
+  - **Per-record persistent storage** with TTL bumps on every write and a
+    permissionless `touch_ttl` keeper entrypoint; only the id counter
+    remains in instance storage.
+  - `create_escrow` now takes the `token` address; timeout refund
+    semantics unchanged.
+- Token failures are bucketed as `ForgeError::TokenTransferFailed`
+  (new shared error variant, code 11) rather than forwarding opaque
+  token discriminants.
+- Workspace version bumped to 0.2.0 (path-dependency versions updated).
+
+### Added
+- **Randomized property suite** for the escrow contract (`props.rs`,
+  proptest): P1 conservation over random terminal paths, P2 pool
+  conservation under storage-tampering adversaries (`env.as_contract`),
+  P3 fund safety over arbitrary call sequences checked against an
+  independent state-machine mirror, including outsider-dispute
+  rejection. Escrow tests 27 → 30; workspace 107. The suite's first run
+  caught a bug — in the test's own conservation formula, fixed, with the
+  minimal counterexample preserved in a comment.
+- `docs/REJECTION-PROOFING.md` (pre-submission checklist with owners)
+  and `docs/DESIGN-PARTNER-OUTREACH.md` (pilot outreach template).
+- **Generated TypeScript client** for the deployed escrow contract
+  (`packages/typescript-sdk`, published as `@soroban-forge/escrow-client`):
+  produced by `stellar contract bindings typescript` from the testnet
+  contract's ABI, with the deployed contract ID embedded and every
+  method typed with doc comments from the Rust source. Replaces the
+  v0.1.0 console-log placeholder SDK.
+- `docs/GRANT-APPLICATION.md`: application narrative with the live
+  testnet proof links, the rejection-cause resolutions, and a
+  tranche-scoped ask.
+- Escrow test suite grew from 16 to 27 tests, including a **conservation
+  property** asserting `deposited == paid out` on every terminal path ×
+  timeout combination, insufficient-balance failure ordering, dispute
+  freeze coverage, and TTL-keeper behavior. Workspace total: 104 tests.
+- `docs/FEATURE-STATUS.md` (per-entrypoint status matrix) and
+  `docs/RESUBMISSION.md` (phased plan); `docs/KNOWN-LIMITATIONS.md`
+  rewritten to the post-migration state.
+
 ### Removed
 - Internal maintainer-process docs (`docs/maintainers/`) and
   `.github/settings.yml` from the public tree; contributor-facing work remains
@@ -93,6 +187,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - `unsafe` code is forbidden workspace-wide.
 - `cargo audit` runs in CI. `RUSTSEC-2026-0009` (`time` 0.3.44) is a
-  transitive dependency of the pinned soroban-sdk 21.x chain, is not compiled
-  into the workspace graph, and is ignored in CI with rationale until the
-  soroban-sdk 27 migration (issue #14) removes it.
+  transitive dependency of the pinned soroban-sdk 21.x chain, is not
+  compiled into the workspace graph, and is ignored in CI with rationale
+  until the soroban-sdk 27 migration (issue #14) removes it.

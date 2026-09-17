@@ -2,12 +2,16 @@
 
 | Contract | Path | Status |
 |----------|------|--------|
-| Escrow | crates/escrow | Implemented · 16 tests |
-| Vesting | crates/vesting | Implemented · 21 tests |
-| Multi-Sig Wallet | crates/multi-sig-wallet | Implemented · 18 tests |
-| DAO Governance | crates/dao-governance | Implemented · 16 tests |
-| Subscription Payments | crates/subscription-payments | Implemented · 12 tests |
-| Marketplace Royalties | crates/marketplace-royalties | Implemented · 10 tests |
+| Escrow | crates/escrow | **Flagship** — real SEP-41 settlement, disputes, events, persistent storage · 27 tests |
+| Vesting | crates/vesting | State machine + tests · **no token settlement** |
+| Multi-Sig Wallet | crates/multi-sig-wallet | State machine + tests · no execution dispatch |
+| DAO Governance | crates/dao-governance | State machine + tests · executes nothing on-chain |
+| Subscription Payments | crates/subscription-payments | State machine + tests · charges nothing |
+| Marketplace Royalties | crates/marketplace-royalties | State machine + tests · pays no recipients |
+
+Per-entrypoint detail lives in the [Feature Status Matrix](../FEATURE-STATUS.md);
+the aggregate gaps (token settlement, events, storage TTL, deployments) are
+documented in [Known Limitations](../KNOWN-LIMITATIONS.md).
 
 ## Adding a New Contract
 

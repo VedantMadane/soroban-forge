@@ -14,16 +14,15 @@ members = [
 exclude = ["packages", "examples", "templates"]
 
 [workspace.package]
-version       = "0.1.0"
+version       = "0.2.0"
 edition       = "2021"
-rust-version  = "1.96"
+rust-version  = "1.84"
 license       = "MIT OR Apache-2.0"
 repository    = "https://github.com/Meet-hybrid/soroban-forge"
 
 [workspace.dependencies]
-soroban-sdk       = "=21.5.1"
-soroban-sdk-macros = "=21.5.1"
-rand              = { version = "0.8", default-features = false, features = ["small_rng"] }
+soroban-sdk       = "=27.0.6"
+soroban-sdk-macros = "=27.0.6"
 clap              = { version = "4.5", features = ["derive"] }
 
 [workspace.lints.rust]

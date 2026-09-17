@@ -4,9 +4,8 @@ This tutorial will walk you through building and testing a Soroban Forge contrac
 
 ## Prerequisites
 
-- Rust **1.96.0** (pinned via `rust-toolchain.toml`; do not use a newer
-  stable — the pinned soroban-sdk 21.x does not compile on newer toolchains)
-- `rustup target add wasm32-unknown-unknown`
+- Rust **stable** (pinned via `rust-toolchain.toml` to the stable channel)
+- `rustup target add wasm32v1-none`
 - `cargo install soroban-cli`
 
 ## Step 1: Build
@@ -33,8 +32,8 @@ cargo clippy --workspace --all-targets -- -D warnings
 
 ```bash
 stellar contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/soroban_forge_escrow.wasm \
-  --source-account GD...
+  --wasm target/wasm32v1-none/release/soroban_forge_escrow.wasm \
+  --source-account GD... \
   --network testnet
 ```
 

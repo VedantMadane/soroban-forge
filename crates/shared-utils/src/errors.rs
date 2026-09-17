@@ -31,4 +31,11 @@ pub enum ForgeError {
     ArithmeticOverflow = 9,
     /// Contract-specific error that does not map to the categories above.
     Custom = 10,
+    /// A SEP-41 token invocation failed (insufficient balance, missing or
+    /// deauthorized trustline, undeployed token contract, or token-logic
+    /// rejection). The raw token error discriminant is intentionally not
+    /// forwarded — callers cannot tell which contract produced a forwarded
+    /// code, so it is bucketed; the root cause remains visible in the
+    /// transaction's diagnostic events.
+    TokenTransferFailed = 11,
 }

@@ -1,12 +1,11 @@
-# The workspace pins Rust 1.96.0: soroban-sdk 21.x (ethnum 1.5.0) does not
-# compile on newer stable toolchains (TryFromIntError size change breaks a
-# transmute). Upgrading the toolchain requires the soroban-sdk 27 migration
-# tracked in the issue backlog.
+# The workspace tracks stable Rust: soroban-sdk 27.x compiles on current
+# stable toolchains (the old 1.96.0 pin existed only for the SDK 21.x /
+# ethnum 1.5.0 breakage, removed in the SDK 27 migration).
 [toolchain]
-channel  = "1.96.0"
+channel  = "stable"
 components = ["rustfmt", "clippy"]
 profile  = "minimal"
-targets  = ["wasm32-unknown-unknown"]
+targets  = ["wasm32v1-none"]
 
 [toolchain.rust-analyzer]
 rustfmt.overrideCommand = ["cargo", "fmt", "--"]

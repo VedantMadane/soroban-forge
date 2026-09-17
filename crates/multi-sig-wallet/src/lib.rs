@@ -281,7 +281,7 @@ mod tests {
         () => {{
             let env = Env::default();
             env.mock_all_auths();
-            let contract_id = env.register_contract(None, MultiSigWallet);
+            let contract_id = env.register(MultiSigWallet, ());
             let client = SorobanForgeMultiSigWalletClient::new(&env, &contract_id);
             let accounts = TestAccounts::generate(&env);
             let owners = owner_vec(&env, &accounts);
@@ -317,7 +317,7 @@ mod tests {
         () => {{
             let env = Env::default();
             env.mock_all_auths();
-            let contract_id = env.register_contract(None, MultiSigWallet);
+            let contract_id = env.register(MultiSigWallet, ());
             let client = SorobanForgeMultiSigWalletClient::new(&env, &contract_id);
             let accounts = TestAccounts::generate(&env);
             (env, client, accounts)
@@ -409,7 +409,7 @@ mod tests {
     fn submit_before_initialize_is_not_initialized() {
         let env = Env::default();
         env.mock_all_auths();
-        let contract_id = env.register_contract(None, MultiSigWallet);
+        let contract_id = env.register(MultiSigWallet, ());
         let client = SorobanForgeMultiSigWalletClient::new(&env, &contract_id);
         let accounts = TestAccounts::generate(&env);
         let err = client
